@@ -1,0 +1,5 @@
+我可能整理不完，因此放上原始檔。 非常抱歉！
+
+MyOwnGame是Unity全檔案，可用Unity開啟
+
+三個程式檔紀錄，是C:\Users\User\Desktop\吃子彈修正東西\MyOwnGame\Assets\OfflineBullet.cs 的不同時期備分，可看不同時期的吃子彈修正

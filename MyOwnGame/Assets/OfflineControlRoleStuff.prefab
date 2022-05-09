@@ -1,0 +1,104 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &579083169726442100
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 579083169726442103}
+  - component: {fileID: 2698928617246331915}
+  - component: {fileID: 579083169726442096}
+  - component: {fileID: 579083169726442101}
+  m_Layer: 0
+  m_Name: OfflineControlRoleStuff
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &579083169726442103
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 579083169726442100}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 10.408203, y: 16.626953, z: -11.265625}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2698928617246331915
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 579083169726442100}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e0d8917c8ebbc048bb58f18ae1364bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &579083169726442096
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 579083169726442100}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 98c276388cdbef64784e7596e896ecc4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Colors:
+  - {r: 0, g: 0, b: 0, a: 0}
+  - {r: 0, g: 0, b: 0, a: 0}
+  - {r: 0, g: 0, b: 0, a: 0}
+  - {r: 0, g: 0, b: 0, a: 0}
+  SpawnPoint:
+  - {x: -45, y: 3, z: -45}
+  - {x: 45, y: 3, z: 45}
+  - {x: -45, y: 3, z: 45}
+  - {x: 45, y: 3, z: -45}
+  SpawnRotate:
+  - {x: 0, y: 45, z: 0}
+  - {x: 0, y: 225, z: 0}
+  - {x: 0, y: 135, z: 0}
+  - {x: 0, y: 315, z: 0}
+  MyRole: 0
+  HasSpawnRole: 0
+  HorseRole: {fileID: 487387275147546164, guid: db3f05de248ef3e4db04821bb0f12ff1,
+    type: 3}
+  ShooterRole: {fileID: 487387275147546164, guid: db3f05de248ef3e4db04821bb0f12ff1,
+    type: 3}
+  HasChooseHorse: 00000000
+  HasChooseShooter: 00000000
+--- !u!114 &579083169726442101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 579083169726442100}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13b637d2b5ed99745b14eed3098f3240, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  MyRole: {fileID: 0}
+  Bullet: {fileID: 5381797818523666142, guid: 6ff4e2f766c7bbc489d505382f3bbd5d, type: 3}
+  DeathExpose: {fileID: 3480495104414278238, guid: 3c4b0950884081a4da64dfadfd9a9e00,
+    type: 3}
+  CameraRotateSpeed: 9
+  HorseMoveSpeed: 0
+  ShooterMoveSpeed: 0.1
+  TurningTouch: -1
+  MovingTouch: -1
+  HealthPoint: 5

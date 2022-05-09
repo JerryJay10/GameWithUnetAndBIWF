@@ -1,0 +1,235 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+
+public class OfflineBullet : MonoBehaviour
+{
+    public GameObject LittleCrack;
+    public GameObject Explosion;
+    public GameObject AttackHotExplose;
+    public GameObject BulletDestory;
+
+    private float StartTime;
+    private float FlyTime;
+
+    public bool HasStop = false;//子彈狀態：0.射出未撞牆  1.子彈撞牆過，反彈中
+    public bool isOnCollider = false;
+    private bool HasFirstEnterCollider = false;
+
+    private Vector3 OriginForward;
+    private Vector3 ReflectVector;
+    private Vector3 LastForce;
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        GameObject ColliderObject = collision.gameObject;//先一次設好，才不用每次要collision.gameObject都要導一次
+
+        if (!HasFirstEnterCollider)
+        {
+            HasFirstEnterCollider = true;
+            //只執行一次ColliderEnetr(可能一次碰到多個Collider)
+
+
+            switch (ColliderObject.tag)
+            {
+                case "BattleField":
+                    if (HasStop)//可能會吃子彈修正前在藍區，修正後在紅區，召喚來粒子特效，不行
+                    {
+                        GameObject NewLittleCrack = Instantiate(LittleCrack, this.transform.position, ColliderObject.transform.rotation);
+                        NewLittleCrack.GetComponent<Renderer>().material.color = ColliderObject.GetComponent<Renderer>().material.color;
+                        Destroy(NewLittleCrack, 0.8f);
+                    }
+                    break;
+                case "Player":
+                    GameObject NewExplosion = Instantiate(Explosion, this.transform.position, Quaternion.identity);
+                    NewExplosion.GetComponentsInChildren<Transform>()[1].GetComponent<Renderer>().material.color = ColliderObject.GetComponent<Renderer>().material.color;
+                    Destroy(NewExplosion, 0.8f);
+                    break;
+                case "AttackStuff":
+                    GameObject NewAttackHitExplose = Instantiate(AttackHotExplose, (this.transform.position + ColliderObject.transform.position) / 2, Quaternion.identity);
+                    Destroy(NewAttackHitExplose, 0.8f);
+                    break;
+            }
+            //粒子特效
+
+
+
+
+            switch (ColliderObject.tag)
+            {
+                case "BattleField":
+                    ReflectVector = JudgeReflectVector(ColliderObject,0.15f);
+                    //設定ReflectVector(有沒有HasStop都需要)
+                    this.transform.SetParent(null);//解除parent(JudgeReflectVector有套用parent)
+
+
+                    if (!HasStop)//射出後子彈打牆處理(不用TriggerEnter是因為Trigger會讓子彈陷進牆壁，Continuous無法正常運作)
+                    {
+                        GameObject newBullet = Instantiate(this.gameObject);
+
+                        newBullet.GetComponent<OfflineBullet>().ReflectVector = ReflectVector;
+                        newBullet.GetComponent<OfflineBullet>().FlyTime = FlyTime;
+                        newBullet.GetComponent<Collider>().isTrigger = true;//調整完再isTrigger以求最正確OnTriggerEnetr
+                        newBullet.transform.forward = OriginForward;//子彈有freeze rotation原因 : 在碰撞時可能使rotation轉向，引響修正                       
+
+                        
+                        float CalculForward;
+                        CalculForward = Vector3.Angle(ReflectVector, OriginForward);
+
+                        if (CalculForward > 90f)//不要廣義角(其實只會有0到180度)
+                            CalculForward = 180f - CalculForward; 
+                        //計算CalcilForward角度，除Cos(此角度)後以修正卡子彈效果
+
+                        Vector3 BulletMoveForward = OriginForward * 0.25f / Mathf.Cos(CalculForward / 180 * 3.14f);//讓子彈像卡在地板(Cos是用徑來表示角度)
+
+                        RaycastHit hit;
+                        while (Physics.Raycast(this.transform.position, OriginForward, out hit,Vector3.Distance(new Vector3(0,0,0),BulletMoveForward)) && (hit.collider.gameObject != ColliderObject))//垂直打入才不會有問題
+                        {
+                            BulletMoveForward = BulletMoveForward * 0.9f;//修正後可能卡在牆上或穿過牆，此while是修正用
+                        }
+
+                        Debug.DrawLine(this.transform.position, this.transform.position + BulletMoveForward,Color.red,5f);
+                        print(ReflectVector);
+
+                        newBullet.transform.position = this.transform.position + BulletMoveForward;//吃子彈修正完成
+
+                        
+                        //newBullet.GetComponent<OfflineBullet>().DetactBulletOverFly();//確認卡子彈調整後是否不在牆上了
+
+                        
+
+                        Destroy(this.gameObject);
+                    }
+                    else//反彈後子彈打牆處理
+                    {
+
+                        this.GetComponent<Rigidbody>().AddForce(-LastForce);//先停止在施力，比較符合彈射的感覺
+
+                       
+                        LastForce = Vector3.Reflect(LastForce, ReflectVector);
+                        this.GetComponent<Rigidbody>().AddForce(LastForce);
+                        //子彈被打到從牆壁反彈模擬
+                    }
+                    break;
+                case "AttackStuff"://空中相遇(進入Trigger不會執行)
+                    if (FlyTime <= ColliderObject.GetComponent<OfflineBullet>().FlyTime)
+                        Destroy(this.gameObject);
+                    //後發射者毀滅(或一出來就碰到者，用於反彈時Collider沒碰，生出的Trigger碰時)
+
+                    ColliderObject.GetComponent<Rigidbody>().AddForce(this.transform.forward * 2000f * 2f);
+                    break;
+                case "Player"://打到玩家
+                    ColliderObject.GetComponent<BeHit>().HasBeHit();
+                    Destroy(this.gameObject);
+                    break;
+            }
+            //子彈碰撞處理(Collider)         
+        }     
+    }
+
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.tag != "BattleField")
+            this.GetComponent<Collider>().isTrigger = false;
+        else
+        {
+            GameObject NewLittleCrack = Instantiate(LittleCrack, this.transform.position,other.gameObject.transform.rotation);
+            NewLittleCrack.GetComponent<Renderer>().material.color = other.gameObject.GetComponent<Renderer>().material.color;
+            Destroy(NewLittleCrack, 0.8f);
+            //吃子彈修正而未出的特效，在此補出
+
+            HasStop = true;//測OverFly時用
+        }
+            
+
+        if (other.tag == "AttackStuff")//開始反彈
+        {
+            LastForce = Vector3.Reflect(other.transform.forward, ReflectVector) * 1500;                    
+            this.GetComponent<Rigidbody>().AddForce(LastForce);
+            //子彈被打到從牆壁反彈模擬 
+
+            if (FlyTime <= other.gameObject.GetComponent<OfflineBullet>().FlyTime)
+                Destroy(this.gameObject);
+            //沒HasStop者毀滅(不知為何Collider進入Trigger會執行，所以要if)
+        }
+    }
+    //除了打地反彈用Trigger，其他用Collider處理
+
+
+    private void OnCollisionExit(Collision collision)
+    {
+        HasFirstEnterCollider = false;
+        isOnCollider = false;
+    }
+    //離開Collision回復HasFirstEnetrCollider
+
+    public void DetactBulletOverFly()
+    {
+        StartCoroutine(OverFliedFixed());
+    }
+    IEnumerator OverFliedFixed()
+    {
+        yield return new WaitForSecondsRealtime(0.05f);
+
+        print("Over");
+        if (!HasStop)
+        {
+            this.GetComponent<Collider>().isTrigger = false;
+            HasStop = false;
+            this.GetComponent<Rigidbody>().AddForce(OriginForward * 1500f); 
+        }
+        else
+            Destroy(this.GetComponentsInChildren<Transform>()[1].gameObject);//取消拖曳線特效(在這裡取消才不會OverFly時沒有拖曳線)
+    }
+    //OverFly時就繼續飛，回復原本模式
+
+
+    private void Start()
+    {
+        StartTime = Time.time;
+        OriginForward = this.transform.forward;//在Collider碰撞時rotation可改變(即使freeze rotation)，所以先設好OriginForward
+        Debug.DrawRay(this.transform.position, this.transform.forward, Color.blue, 5f);
+    }
+    private void Update()
+    {
+        FlyTime = Time.time - StartTime;
+        if (FlyTime > 5f)
+        {
+            if(HasStop)
+                Destroy(this.gameObject);
+        }
+        if (Time.time - StartTime > 20f)
+            Destroy(this.gameObject);
+        //預防射向天空，要一直計算子彈，不會被消滅
+    }
+    //計算FlyigTime
+
+
+    private Vector3 JudgeReflectVector(GameObject Wall,float FlxedDistance)//FixDistance為Collider時球的半徑，在Trigger時可不用
+    {
+        this.transform.SetParent(Wall.transform);//看牆的坐標系中，這顆球的位置
+                                                 //SetParent後position,rotation,localscale都會被影響，因此position要找回原本的值(其他在this.transform.SetParent(null)就會回復)
+
+        if (Mathf.Abs(this.transform.localPosition.x* Wall.transform.localScale.x) >= (Mathf.Abs(Wall.transform.localScale.x / 2)+FlxedDistance))
+            return Wall.transform.right;
+        else if (Mathf.Abs(this.transform.localPosition.y* Wall.transform.localScale.y) >= (Mathf.Abs(Wall.transform.localScale.y / 2)+FlxedDistance))//* Wall.transform.localScale.y是要還原position
+            return Wall.transform.up;
+        else if (Mathf.Abs(this.transform.localPosition.z * Wall.transform.localScale.z) >= (Mathf.Abs(Wall.transform.localScale.z / 2)+FlxedDistance))
+            return Wall.transform.forward;
+        else
+            return new Vector3(0, 0, 0);
+    }
+    //判斷要reflect的Vector(打到的牆壁髮線)
+
+    private void OnDestroy()
+    {
+        if (HasStop || !HasFirstEnterCollider)//在第一次碰撞時不撥放
+        {
+            GameObject NewBulletDestory = Instantiate(BulletDestory, this.transform.position, this.transform.rotation);
+            NewBulletDestory.GetComponent<Renderer>().material.color = this.GetComponent<Renderer>().material.color;
+            Destroy(NewBulletDestory, 0.8f);
+        }
+    }
+}

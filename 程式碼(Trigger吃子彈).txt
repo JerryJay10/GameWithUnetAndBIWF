@@ -1,0 +1,312 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+
+public class OfflineBullet : MonoBehaviour
+{
+    public GameObject LittleCrack;
+    public GameObject Explosion;
+    public GameObject AttackHotExplose;
+    public GameObject BulletDestory;
+
+    public float BulletSpeed;
+    private float StartTime;
+    private float FlyTime;
+
+    public bool HasStop = false;//子彈狀態：0.射出未撞牆  1.子彈撞牆過，反彈中
+    public bool isOnCollider = false;
+    private bool HasFirstEnterCollider = false;
+
+    private Vector3 LastForce;
+    private Vector3 ReflectVector;
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        
+        
+        if (!HasFirstEnterCollider)
+        {
+            HasFirstEnterCollider = true;
+            //只執行一次ColliderEnetr(可能一次碰到多個Collider)
+
+
+            print("collidre");
+
+
+            Vector3 point = collision.GetContact(0).point;
+
+            /*switch (ColliderObject.tag)
+            {
+                case "BattleField":
+                    if (!HasStop)
+                    {
+                        HasStop = true;
+
+
+                        /*Vector3 thisForward = this.transform.forward;//導好thisForward才不用一直寫
+                        Vector3 BulletToContact = collision.GetContact(0).point - this.transform.position;//導好BulletToContact才不用一直寫
+                        RaycastHit hit;
+                        if(Physics.Raycast(this.transform.position, BulletToContact, out hit))
+                            ReflectVector = hit.normal;//設定ReflectVector(第一個碰到點的法線)//不用collision.GetContact(0).normal是因為這是get"把子彈推出去的方向"，和get表面的normal不一樣
+
+                        print(ReflectVector);
+
+                        float ContactDistance = BulletToContact.magnitude;
+                        float ContactAngle = Vector3.Angle(ReflectVector, BulletToContact);//髮線與觸控點到子彈線的夾角
+
+                        float VertialDistance = ContactDistance * Mathf.Cos(Mathf.Deg2Rad * ContactAngle);//下陷垂直距離(Deg2Rad是/180 * pi的結果)
+
+                        float RealAngle = Vector3.Angle(ReflectVector, -thisForward);//髮線與子彈forward的夾角
+                        float RealForwardDistance = VertialDistance / Mathf.Cos(Mathf.Deg2Rad * RealAngle);//真正下陷距離
+                        
+                        this.transform.position = this.transform.position - thisForward * (RealForwardDistance + 0.1f);//吃子彈修正完成
+                    }
+                    
+
+                   
+
+
+                    //newBullet.GetComponent<OfflineBullet>().DetactBulletOverFly();//確認卡子彈調整後是否不在牆上了
+
+
+                    
+                    //反彈後子彈打牆處理
+                    {
+
+                        this.GetComponent<Rigidbody>().AddForce(-LastForce);//先停止在施力，比較符合彈射的感覺
+
+
+                        LastForce = Vector3.Reflect(LastForce, ReflectVector);
+                        this.GetComponent<Rigidbody>().AddForce(LastForce);
+                        //子彈被打到從牆壁反彈模擬
+                    }
+
+
+                    break;
+                case "AttackStuff"://空中相遇(進入Trigger不會執行)
+                    if (FlyTime <= ColliderObject.GetComponent<OfflineBullet>().FlyTime)
+                        Destroy(this.gameObject);
+                    //後發射者毀滅(或一出來就碰到者，用於反彈時Collider沒碰，生出的Trigger碰時)
+
+                    ColliderObject.GetComponent<Rigidbody>().AddForce(this.transform.forward * 2000f * 2f);
+                    break;
+                case "Player"://打到玩家
+                    ColliderObject.GetComponent<BeHit>().HasBeHit();
+                    Destroy(this.gameObject);
+                    break;
+            }
+            //子彈碰撞處理(Collider)    */     
+        }     
+    }
+
+
+    private void OnTriggerEnter(Collider other)//不用isKinematic + OnColliderEnter來做無碰撞偵測原因 : 1.不用collision.GetContact(0).normal了 2.continuous speculative仍有可能tunneling(雖然旋轉時不會，但快速移動會，不符合目的)，isKinematic只能用speculative
+    {
+
+        print("hit");
+
+
+        if (!HasFirstEnterCollider)
+        {
+            HasFirstEnterCollider = true;
+            //只執行一次ColliderEnetr(可能一次碰到多個Collider)
+
+
+            switch (other.tag)
+            {
+                case "BattleField":
+                    if (!HasStop)
+                        BulletInWallFixed(other);                      
+
+                    break;
+                case "AttackStuff":
+                    if (!HasStop)
+                        Destroy(this.gameObject);
+                    else
+                    {
+                        LastForce = Vector3.Reflect(other.transform.forward, ReflectVector) * 1000f;
+                        this.GetComponent<Rigidbody>().AddForce(LastForce);
+                        this.GetComponent<Collider>().isTrigger = false;
+                        //子彈被打到從牆壁反彈模擬 
+                    }
+
+                    break;
+
+            }
+
+
+
+            /*if (other.tag == "AttackStuff")//開始反彈
+            {
+                LastForce = Vector3.Reflect(other.transform.forward, ReflectVector) * 1500;
+                this.GetComponent<Rigidbody>().AddForce(LastForce);
+                //子彈被打到從牆壁反彈模擬 
+
+                if (FlyTime <= other.gameObject.GetComponent<OfflineBullet>().FlyTime)
+                    Destroy(this.gameObject);
+                //沒HasStop者毀滅(不知為何Collider進入Trigger會執行，所以要if)
+            }*/
+        }
+        //主運算程式
+
+        if(other.tag != "BattleField")//吃子彈特效會播，避免
+            UseParticle(other);//粒子特效
+    }
+
+
+    private void OnTriggerStay(Collider other)
+    {
+        if (!HasStop)
+            BulletInWallFixed(other);
+    }
+
+
+    private void OnTriggerExit(Collider other)
+    {
+        HasFirstEnterCollider = false;
+    }
+    //離開Collision回復HasFirstEnetrCollider
+
+
+
+    private void Start()
+    {
+        StartTime = Time.time;
+    }
+    private void Update()
+    {
+        FlyTime = Time.time - StartTime;
+        if (FlyTime > 5f)
+        {
+            if(HasStop)
+                Destroy(this.gameObject);
+        }
+        if (Time.time - StartTime > 20f)
+            Destroy(this.gameObject);
+        //預防射向天空，要一直計算子彈，不會被消滅
+    }
+    //計算FlyigTime
+
+    
+
+    private void UseParticle(Collider other)
+    {
+        switch (other.tag)
+        {
+            case "BattleField":
+                if (HasStop)
+                {
+                    Destroy(this.GetComponentsInChildren<Transform>()[1].gameObject);//取消拖曳線特效
+                    GameObject NewLittleCrack = Instantiate(LittleCrack, this.transform.position, other.transform.rotation);
+                    NewLittleCrack.GetComponent<Renderer>().material.color = other.GetComponent<Renderer>().material.color;
+                    Destroy(NewLittleCrack, 0.8f);
+                }
+                break;
+            case "Player":
+                GameObject NewExplosion = Instantiate(Explosion, this.transform.position, Quaternion.identity);
+                NewExplosion.GetComponentsInChildren<Transform>()[1].GetComponent<Renderer>().material.color = other.GetComponent<Renderer>().material.color;
+                Destroy(NewExplosion, 0.8f);
+                break;
+            case "AttackStuff":
+                GameObject NewAttackHitExplose = Instantiate(AttackHotExplose, (this.transform.position + other.transform.position) / 2, Quaternion.identity);
+                Destroy(NewAttackHitExplose, 0.8f);
+                break;
+        }      
+    }
+    //粒子特效
+
+    private void BulletInWallFixed(Collider other)
+    {
+        Vector3 thisForward = this.transform.forward;//導好thisForward才不用一直寫
+        Vector3 thisPosition = this.transform.position;//導好thisPosition才不用一直寫
+        float FrameDistance = BulletSpeed * Time.deltaTime;//子彈一幀前進距離
+
+        Vector3 BeforeBulletPosition = thisPosition - 2 * thisForward * FrameDistance;//找兩幀前的位置(前兩幀: 未碰撞->前一幀:處理碰撞(Trigger沒有) + 確認Continuse(當兩幀到一幀間有東西，觸發碰撞)->此幀:OnTriggerEnter)，此為實驗結果，無查資料(Continous原理有查到)
+        
+        Debug.DrawLine(thisPosition, BeforeBulletPosition, Color.red, 10f);
+        Debug.DrawLine(BeforeBulletPosition,BeforeBulletPosition + thisForward * (FrameDistance + 0.5f), Color.blue, 5f);
+        
+        RaycastHit hit;
+        Ray ray = new Ray(BeforeBulletPosition, thisForward);
+
+        
+
+        bool CanStop = true;
+        
+        
+        if (Physics.Raycast(ray, out hit, FrameDistance + 0.25f))//兩幀前位置(未碰撞才能確保沒有陷入牆中)往前(1個FrameDistance+子彈半徑)有東西(記得把queries hit triggers關掉，不然raycast會打到子彈)
+        {
+            this.transform.position = hit.point;//這就是吃子彈修正(前一幀射出的Raycast打到的點)
+            ReflectVector = hit.normal;//之後要用
+        }
+        else//沒有陷進去
+        {
+            Vector3 SimlarContactPoint = other.ClosestPoint(BeforeBulletPosition);//以兩幀前子彈位置(確認必在尖端後端)找最近點最接近碰撞點，確認找到第一處控面的點(不在兩幀前最近點可在另一面)(前方沒東西時。我們能確定1幀前沒有在collider裡面)
+            Vector3 BeforeBulletToSimlarPoint = SimlarContactPoint - BeforeBulletPosition;//get ReflectVector用
+
+            Debug.DrawRay(BeforeBulletPosition, BeforeBulletToSimlarPoint, Color.green, 7f);
+            ray = new Ray(BeforeBulletPosition, BeforeBulletToSimlarPoint);
+            if (Physics.Raycast(ray, out hit))
+                ReflectVector = hit.normal;//不用collision.GetContact(0).normal是因為這是get"把子彈推出去的方向"，和get表面的normal不一樣
+            else
+                ReflectVector = new Vector3(0f, 0f, 0f);//其實一定打的到，只是編譯器不知道，所以隨便給值
+             //得到ReflectVector
+
+            ray = new Ray(BeforeBulletPosition + thisForward * (FrameDistance + 0.5f), -ReflectVector);//以一幀+子彈直徑前位置(確認必在尖端前端)為始向下找地板
+            Debug.DrawRay(BeforeBulletPosition + thisForward * (FrameDistance + 0.5f), -ReflectVector, Color.black, 10f);
+            if (!Physics.Raycast(ray,out hit) || hit.normal == ReflectVector)//地板與other是同一平面，就不會是碰邊邊，會是沒陷太深，再執行一次
+            {
+                print("a");
+                HasFirstEnterCollider = false;//讓程式可以再跑一次
+                CanStop = false;
+            }
+            else//碰邊邊
+            {
+                Vector3 BulletToSimlarPoint = SimlarContactPoint - thisPosition;//主要計算用
+                             
+                float SimlarAngle = Vector3.Angle(BulletToSimlarPoint, ReflectVector);
+                float SimlarDistance = BulletToSimlarPoint.magnitude;
+
+                float VertialDistance = SimlarDistance * Mathf.Cos(Mathf.Deg2Rad * SimlarAngle);//下陷垂直距離(Deg2Rad是/180 * pi的結果)
+
+                float RealAngle = Vector3.Angle(ReflectVector, -thisForward);//髮線與子彈forward的夾角
+                float RealForwardDistance = VertialDistance / Mathf.Cos(Mathf.Deg2Rad * RealAngle);//真正下陷距離
+
+                Vector3 SimlarBullet = thisPosition - thisForward * RealForwardDistance;//找到平行尖端的點，確認頂一夏ClosestPoint必找到尖端
+
+
+                SimlarContactPoint = other.ClosestPoint(SimlarBullet);//以SimlarBullet找最近點(原本為前兩幀)，確認找到尖端
+                Vector3 CloestPointToBullet = thisPosition - SimlarContactPoint;//最近點到子彈向量
+
+                Debug.DrawLine(thisPosition, SimlarContactPoint, Color.yellow, 10f);
+
+                float CloestPointDistance = CloestPointToBullet.magnitude;
+
+                float FixingAndle = Vector3.Angle(CloestPointToBullet, thisForward);//最近點到子彈向量與Forward的夾角
+                float FixedForwardDistance = CloestPointDistance * Mathf.Cos(Mathf.Deg2Rad * FixingAndle);//返回距離
+
+                this.transform.position = thisPosition - thisForward * FixedForwardDistance;//返回完成
+                //返回到thisForward離最近點最近的位置
+            }
+        }
+
+        if (CanStop)//可能沒陷進去不執行
+        {
+            HasStop = true;
+            this.GetComponent<Rigidbody>().AddForce(-this.transform.forward * BulletSpeed, ForceMode.Impulse);//確認修正完成後才停止子彈
+            UseParticle(other);//不確定何時做完修正，所以做完就播
+        }
+    }
+    //吃子彈修正
+
+    private void OnDestroy()
+    {
+        if (HasStop || !HasFirstEnterCollider)//在第一次碰撞時不撥放
+        {
+            GameObject NewBulletDestory = Instantiate(BulletDestory, this.transform.position, this.transform.rotation);
+            NewBulletDestory.GetComponent<Renderer>().material.color = this.GetComponent<Renderer>().material.color;
+            Destroy(NewBulletDestory, 0.8f);
+        }
+    }
+}
